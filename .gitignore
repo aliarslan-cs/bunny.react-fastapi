@@ -60,6 +60,11 @@ cover/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+bunny.db
+test.db
+backend/data/
+frontend/node_modules/
+frontend/dist/
 
 # Flask stuff:
 instance/

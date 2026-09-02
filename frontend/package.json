@@ -1,0 +1,9 @@
+{
+  "name": "bunny-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {"dev": "vite", "build": "vite build", "test": "echo No frontend tests yet"},
+  "dependencies": {"@vitejs/plugin-react": "latest", "vite": "latest", "react": "latest", "react-dom": "latest", "lucide-react": "latest"},
+  "devDependencies": {}
+}

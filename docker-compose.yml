@@ -1,0 +1,17 @@
+services:
+  backend:
+    build: ./backend
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-local-development-secret}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      DATABASE_URL: ${DATABASE_URL:-sqlite:///./data/bunny.db}
+      COLD_START: ${COLD_START:-true}
+    volumes:
+      - bunny-data:/app/data
+    ports: ["8000:8000"]
+  frontend:
+    build: ./frontend
+    depends_on: [backend]
+    ports: ["5173:80"]
+volumes:
+  bunny-data:
