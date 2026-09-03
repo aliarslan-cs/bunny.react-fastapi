@@ -10,8 +10,8 @@ const api = async (path, options = {}) => {
     headers: {
       'Content-Type': 'application/json',
       ...(options.headers || {}),
-      ...(localStorage.token
-        ? { Authorization: `Bearer ${localStorage.token}` }
+      ...(localStorage.getItem('token')
+        ? { Authorization: `Bearer ${localStorage.getItem('token')}` }
         : {}),
     },
   });
@@ -40,7 +40,7 @@ function Login({ onLogin }) {
         method: 'POST',
         body: JSON.stringify(form),
       });
-      localStorage.token = data.access_token;
+      localStorage.setItem('token', data.access_token);
       onLogin(data.user);
     } catch (err) {
       setError(err.message);
@@ -105,7 +105,18 @@ function App({ user, onLogout }) {
   const [requests, setRequests] = useState([]);
   const [metrics, setMetrics] = useState(null);
   const [search, setSearch] = useState('');
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState(() => window.location.pathname.slice(1) || 'overview');
+
+  useEffect(() => {
+    const handleNavigation = () => setTab(window.location.pathname.slice(1) || 'overview');
+    window.addEventListener('popstate', handleNavigation);
+    return () => window.removeEventListener('popstate', handleNavigation);
+  }, []);
+
+  const navigate = (nextTab) => {
+    window.history.pushState({}, '', `/${nextTab}`);
+    setTab(nextTab);
+  };
 
   useEffect(() => {
     api(`/products?search=${encodeURIComponent(search)}`).then(setProducts);
@@ -131,7 +142,7 @@ function App({ user, onLogout }) {
         {nav.map((item) => (
           <button
             className={tab === item.id ? 'nav active' : 'nav'}
-            onClick={() => setTab(item.id)}
+            onClick={() => navigate(item.id)}
             key={item.id}
           >
             <item.icon size={18} />
@@ -347,12 +358,23 @@ function SupportTable({ items }) {
 
 function Root() {
   const [user, setUser] = useState(null);
+  const token = localStorage.getItem('token');
+  const [checkingSession, setCheckingSession] = useState(Boolean(token));
+
+  useEffect(() => {
+    if (!token) return;
+    api('/auth/me')
+      .then(setUser)
+      .catch(() => localStorage.removeItem('token'))
+      .finally(() => setCheckingSession(false));
+  }, [token]);
 
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
   };
 
+  if (checkingSession) return <main className="session-check">Checking session...</main>;
   return user ? <App user={user} onLogout={logout} /> : <Login onLogin={setUser} />;
 }
 
