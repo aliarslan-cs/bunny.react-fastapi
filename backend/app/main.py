@@ -1,5 +1,6 @@
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_redoc_html
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from .config import settings
@@ -21,7 +22,7 @@ from .schemas import (
 )
 from .security import create_token, current_user, manager_only, verify_password
 
-app = FastAPI(title="Bunny Boilerplate API", version="0.1.0")
+app = FastAPI(title="Bunny Boilerplate API", version="0.1.0", redoc_url=None)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.origins,
@@ -29,6 +30,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/redoc", include_in_schema=False)
+def redoc() -> str:
+    return get_redoc_html(
+        openapi_url=app.openapi_url,
+        title=app.title,
+        redoc_js_url="https://cdn.jsdelivr.net/npm/redoc@2.4.0/bundles/redoc.standalone.js",
+    )
 
 
 @app.on_event("startup")
