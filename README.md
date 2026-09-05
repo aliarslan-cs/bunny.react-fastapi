@@ -29,6 +29,44 @@ podman compose up --build
 
 The API is at `http://localhost:8000` and the frontend at `http://localhost:5173`. Set `CORS_ORIGINS` and `JWT_SECRET` in `.env` for non-local use. The development cold start seeds data when `COLD_START=true`.
 
+## Observability (LGTM & OpenTelemetry)
+
+The repository includes a complete observability stack powered by **OpenTelemetry** and the **LGTM** stack (Loki, Grafana, Tempo, Prometheus) with persistent named volumes and bidirectional cross-navigation.
+
+### Start the observability stack
+
+```bash
+make obs-up
+# Or directly:
+podman compose -f deploy/observability/docker-compose.observability.yml up -d
+# (or: docker compose -f deploy/observability/docker-compose.observability.yml up -d)
+```
+
+To run both the application and the observability stack together:
+```bash
+make dev-all
+```
+
+### Stop or inspect the observability stack
+
+* **Follow container logs**: `make obs-logs`
+* **Stop containers** (preserves volume data): `make obs-down`
+* **Clean up containers and volumes**: `make obs-clean`
+
+### Explore in Grafana
+
+Open `http://localhost:3000` (Default credentials: `admin` / `admin`).
+
+* **Dashboards**: Navigate to **Dashboards → Bunny → Bunny API Overview** for real-time Request Rate (RPS), Latency P50/P95, 5xx server errors, and live logs.
+* **Explore Logs & Traces (Correlation)**:
+  1. Open **Explore → Loki** and query `{service_name="bunny-api"} | json`.
+  2. Click any highlighted `trace_id` in a log line to immediately open the full distributed trace waterfall in **Tempo**.
+  3. In **Tempo**, use the `tracesToLogs` button to jump back into the exact log stream for that span.
+* **Prometheus Metrics**: Available directly in Grafana or at `http://localhost:9090`.
+
+For full architecture and design details, see [`docs/observability.md`](docs/observability.md).
+
+
 ## API
 
 FastAPI publishes OpenAPI at `/docs` and `/redoc`.

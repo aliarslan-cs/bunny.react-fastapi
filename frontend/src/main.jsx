@@ -4,11 +4,64 @@ import { BarChart3, Boxes, LogOut, MessageSquare, ShieldCheck, TrendingUp } from
 import './styles.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+function generateRandomHex(bytes) {
+  const arr = new Uint8Array(bytes);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function generateTraceparent() {
+  const traceId = generateRandomHex(16); // 32 hex chars
+  const spanId = generateRandomHex(8);   // 16 hex chars
+  return `00-${traceId}-${spanId}-01`;
+}
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Unhandled UI Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <main className="login-shell">
+          <div className="login-card" style={{ maxWidth: '480px', textAlign: 'center' }}>
+            <h2>Something went wrong</h2>
+            <p className="muted">An unexpected client-side error occurred.</p>
+            <div className="error" style={{ textAlign: 'left', wordBreak: 'break-word', fontFamily: 'monospace' }}>
+              {this.state.error?.message || String(this.state.error)}
+            </div>
+            <button className="primary" onClick={() => window.location.reload()} style={{ marginTop: '1rem' }}>
+              Reload Application
+            </button>
+          </div>
+        </main>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const api = async (path, options = {}) => {
+  const traceparent = generateTraceparent();
+  const requestId = `req-${generateRandomHex(6)}`;
+
   const response = await fetch(`${API}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      'X-Request-ID': requestId,
+      'traceparent': traceparent,
       ...(options.headers || {}),
       ...(localStorage.getItem('token')
         ? { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -17,7 +70,13 @@ const api = async (path, options = {}) => {
   });
 
   if (!response.ok) {
-    throw new Error((await response.json()).detail || 'Request failed');
+    const errorBody = await response.json().catch(() => ({}));
+    const message = errorBody.detail || 'Request failed';
+    const serverReqId = response.headers.get('X-Request-ID') || requestId;
+    const error = new Error(`${message} (Request ID: ${serverReqId})`);
+    error.requestId = serverReqId;
+    error.status = response.status;
+    throw error;
   }
 
   return response.json();
@@ -378,4 +437,8 @@ function Root() {
   return user ? <App user={user} onLogout={logout} /> : <Login onLogin={setUser} />;
 }
 
-createRoot(document.getElementById('root')).render(<Root />);
+createRoot(document.getElementById('root')).render(
+  <ErrorBoundary>
+    <Root />
+  </ErrorBoundary>
+);

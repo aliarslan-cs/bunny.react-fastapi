@@ -20,16 +20,30 @@ from .schemas import (
     Token,
     UserOut,
 )
+from .logging_config import setup_logging
+from .middleware import CorrelationMiddleware
 from .security import create_token, current_user, manager_only, verify_password
+from .telemetry import setup_telemetry
+
+# Initialize structured logging subsystem
+setup_logging()
 
 app = FastAPI(title="Bunny Boilerplate API", version="0.1.0", redoc_url=None)
+
+# Correlation and access logging middleware
+app.add_middleware(CorrelationMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Request-ID", "X-Trace-ID"],
 )
+
+# Setup OpenTelemetry distributed tracing and metrics
+setup_telemetry(app, engine)
 
 
 @app.get("/redoc", include_in_schema=False)

@@ -6,6 +6,16 @@ class Settings(BaseSettings):
     jwt_secret: str = "local-development-secret"
     cors_origins: str = "http://localhost:5173"
     cold_start: bool = True
+
+    # Observability & OpenTelemetry settings
+    service_name: str = "bunny-api"
+    service_version: str = "0.1.0"
+    environment: str = "development"
+    otel_exporter_otlp_endpoint: str = "http://localhost:4317"
+    otel_enabled: bool = True
+    log_level: str = "INFO"
+    log_format: str = "json"  # "json" or "console"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property

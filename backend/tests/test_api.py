@@ -23,3 +23,17 @@ def test_login_and_product_access():
 def test_worker_cannot_see_sales():
     response = client.get("/sales", headers={"Authorization": f"Bearer {token('worker', 'rekrow')}"})
     assert response.status_code == 403
+
+
+def test_correlation_headers():
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert "x-request-id" in response.headers
+    assert response.headers["x-request-id"].startswith("req-")
+
+
+def test_custom_request_id_propagated():
+    custom_id = "test-custom-request-id-12345"
+    response = client.get("/health", headers={"X-Request-ID": custom_id})
+    assert response.status_code == 200
+    assert response.headers["x-request-id"] == custom_id

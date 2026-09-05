@@ -1,0 +1,89 @@
+services:
+  otel-collector:
+    image: docker.io/otel/opentelemetry-collector-contrib:0.117.0
+    container_name: bunny-otel-collector
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8889:8889"   # Prometheus metrics exporter
+    depends_on:
+      - tempo
+      - loki
+    networks:
+      - bunny-net
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    container_name: bunny-tempo
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml:ro
+      - tempo-data:/tmp/tempo
+    ports:
+      - "3200:3200"   # Tempo HTTP query
+    networks:
+      - bunny-net
+
+  prometheus:
+    image: docker.io/prom/prometheus:v3.1.0
+    container_name: bunny-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - bunny-net
+
+  loki:
+    image: grafana/loki:3.3.2
+    container_name: bunny-loki
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - ./loki.yaml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - bunny-net
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: bunny-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    networks:
+      - bunny-net
+
+volumes:
+  prometheus-data:
+    name: bunny-prometheus-data
+  grafana-data:
+    name: bunny-grafana-data
+  loki-data:
+    name: bunny-loki-data
+  tempo-data:
+    name: bunny-tempo-data
+
+networks:
+  bunny-net:
+    name: bunny-net
+

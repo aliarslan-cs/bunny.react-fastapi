@@ -6,12 +6,20 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
       DATABASE_URL: ${DATABASE_URL:-sqlite:///./data/bunny.db}
       COLD_START: ${COLD_START:-true}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
     volumes:
       - bunny-data:/app/data
     ports: ["8000:8000"]
+    networks:
+      - bunny-net
   frontend:
     build: ./frontend
     depends_on: [backend]
     ports: ["5173:80"]
+    networks:
+      - bunny-net
 volumes:
   bunny-data:
+networks:
+  bunny-net:
+    name: bunny-net
